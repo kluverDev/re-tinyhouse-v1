@@ -1,21 +1,34 @@
 import { IResolvers } from "graphql-tools";
-import { listings } from "../listings";
+import { ObjectId } from "mongodb";
+import { Database, Listing } from "../lib/types";
 
 export const resolvers: IResolvers = {
   Query: {
-    listings: () => {
-      return listings;
+    listings: async (
+      _root: undefined,
+      _args: Record<string, never>,
+      { db }: { db: Database }
+    ): Promise<Listing[]> => {
+      return await db.listings.find({}).toArray();
     },
   },
 
   Mutation: {
-    deleteListing: (_root: undefined, { id }: { id: string }) => {
-      for (let i = 0; i < listings.length; i++) {
-        if (listings[i].id === id) {
-          return listings.splice(i, 1)[0];
-        }
-        throw new Error(" failed to delete listing");
+    deleteListing: async (
+      _root: undefined,
+      { id }: { id: string },
+      { db }: { db: Database }
+    ): Promise<Listing> => {
+      const deleteRes = await db.listings.findOneAndDelete({
+        _id: new ObjectId(id),
+      });
+      if (!deleteRes.value) {
+        throw new Error("failed to delete listing");
       }
+      return deleteRes.value;
     },
+  },
+  Listing: {
+    id: (listing: Listing) => listing._id.toString(),
   },
 };
